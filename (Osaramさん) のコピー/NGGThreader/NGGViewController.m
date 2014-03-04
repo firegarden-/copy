@@ -11,6 +11,10 @@
 #define SCROLL_SPEED 5  //**スクロールの速さ
 #define INTER_SPACE 100  //**障害物の間
 #define TAG_BUILDING 10  //** ??
+//osuzuki:Viewにtagというプロパティがあって、building(View)を分別するためにtagを設定してます！ 他のViewと区別するためです！デフォルトは0が入ってます。数字自体は0以外であればなんでもよかったです。
+//updateViewの中のfor(UIView *scenary in self.sceneries)文内、if文で他のViewと区別してます
+//osuzuki:注意!!!!!全角スペースにきをつけてください！エラーの原因となります。プログラマーが死にます。
+
 
 typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返す
     NGGVIewStatusNone = 0,   //**0は0
@@ -20,7 +24,7 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
 
 };
 
-@interface NGGViewController ()<UICollisionBehaviorDelegate> //**プロトコル宣言だから実装メソッドはなし？
+@interface NGGViewController ()<UICollisionBehaviorDelegate> //**プロトコル宣言だから実装メソッドはなし？//osuzuki:プロトコルは、このメソッドを実装してますよーといった意思表示みたいなもので、これを宣言しといて、このメソッドを実装しないと警告がでます。ただし@optionalがつくと実装してなくてもok.
 //**宣言プロパティで各種ラベル・ビューなど表示のみの設定？
 @property (nonatomic, strong) UILabel *startLabel;
 @property (nonatomic, strong) UILabel *gameOverLabel;
@@ -45,14 +49,19 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
     //背景表示
     UIView *bgView = [[UIView alloc] initWithFrame:self.view.frame]; //**初期化
     bgView.backgroundColor = [UIColor colorWithRed:0 green:150.0f/255.0f blue:255.0f alpha:1.0f]; //**色決め
-    [self.view addSubview:bgView];　//**実行
+    [self.view addSubview:bgView];　//**実行//osuzuki:実行ではないですね。
+    //osuzuki:まずselfは自分自身(NGGViewControllerオブジェクト)を指しています。
+    //このViewController(self)には、独自のViewを持っていて、そのViewにbgViewを上からかぶせて、くっつけてるイメージです。
+    //osuzuki:Viewをくっつけるメソッドは、addSubviewのほかにinsertSubviewとか色々あります。
+    //osuzuki:subViewというのは、self.viewからbgViewをみたイメージです。bgViewからself.viewに対しては「parentView」といいます。
+    //osuzuki:以下subview同様です。
     
     //ボール表示
     CGFloat ballWidth = 40;  //**大きさ（幅）
     CGFloat ballHeight = 40; //**大きさ（高さ）
     UIImageView *ballImageView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"ball"]];　//**初期化+画像入れてる
-    ballImageView.frame = CGRectMake(0, 0, ballWidth, ballHeight); //**表示位置??
-    ballImageView.center = CGPointMake([self displaySize].width/2, [self displaySize].height/2); //**??
+    ballImageView.frame = CGRectMake(0, 0, ballWidth, ballHeight); //**表示位置??//osuzuki:そうです。
+    ballImageView.center = CGPointMake([self displaySize].width/2, [self displaySize].height/2); //**??//osuzuki:位置をずらしてます。
     [self.view addSubview:ballImageView]; //**サブビューに表示実行??
     self.ballImageView = ballImageView;   //**メインビューに表示実行
     
@@ -69,10 +78,10 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
     scoreLabel.textColor = [UIColor whiteColor];  //**文字色
     scoreLabel.font = [UIFont boldSystemFontOfSize:32];　//**文字サイズ
     [self.view addSubview:scoreLabel]; //**サブビューに表示実行??
-    self.scoreLabel = scoreLabel; //**メインビューへ表示実行？？
-    [self updateScore];　　//**??
+    self.scoreLabel = scoreLabel; //**メインビューへ表示実行？？//osuzuki:あとで使うので、viewcontrollerのプロパティとして保持してます
+    [self updateScore];　　//**??//osuzuki:スコアを更新してます。下の方に書いてある、updateScoreメソッドを呼んでます。
     
-    [self setStanbyLabel]; //**スタンバイラベルとは??
+    [self setStanbyLabel]; //**スタンバイラベルとは??//osuzuki:TAP TO START!って表示されるラベルです。
     _viewStatus = NGGVIewStatusStandby;  //**スタンバイラベルをステータスビューへ?
 }
 
@@ -95,7 +104,7 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
 //ディスプレイサイズ
 - (CGSize)displaySize
 {
-    return [[UIScreen mainScreen] bounds].size; //**スクロール表示範囲をサイズ指定??
+    return [[UIScreen mainScreen] bounds].size; //**スクロール表示範囲をサイズ指定??//osuzuki:ここでは指定してないです。画面領域のサイズを取得しているだけです。
 }
 
 //重力とかビヘイビア（iOS7からの機能）を各オブジェクトに付与
@@ -107,19 +116,23 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
       //**以下処理でボールの衝突を初期化して・・・
     UICollisionBehavior *collisionBehavior = [[UICollisionBehavior alloc] initWithItems:@[self.ballImageView]];
     collisionBehavior.translatesReferenceBoundsIntoBoundary = YES; //**境界線で跳ね返りOK
-    collisionBehavior.collisionDelegate = self; //**デリゲート(別の処理場所?)衝突設定は自身に設定?
+    collisionBehavior.collisionDelegate = self; //**デリゲート(別の処理場所?)衝突設定は自身に設定?//osuzuki:特に今回は使ってませんが、UICollisionBehaviorDelegateメソッド（例えば、衝突が起きたときに呼ばれるメソッドとか）を、self=自分自身で呼び出せるようにしてます。
+    //それによって、衝突が起きた時に◯◯したいといった、処理がかけるようになります。このクラスの一番下に書いてます。特に処理は書いてませんが。
     [collisionBehavior addBoundaryWithIdentifier:@"ground" fromPoint:CGPointMake(0, self.groundImageView.frame.origin.y) toPoint:CGPointMake(self.groundImageView.frame.size.width, self.groundImageView.frame.origin.y)];　//**地面の設定なのは分かるのですが、どんな処理??
+    //osuzuki:fromPointからtoPointまで、見えない線を設定し、その線にぶつかったらバウンドしますよ、という処理を書いてます。
     [animator addBehavior:collisionBehavior];
     
     UIPushBehavior *floatUpBeahavior = [[UIPushBehavior alloc] initWithItems:@[self.ballImageView] mode:UIPushBehaviorModeInstantaneous]; //**ボールをタップした瞬間の処理と初期化
-    floatUpBeahavior.pushDirection = CGVectorMake(0, -0.5); //**ボールをタップしたときの動く方向??
-    floatUpBeahavior.active = NO; //**タップしたからといってその他のアクションはなし？
+    floatUpBeahavior.pushDirection = CGVectorMake(0, -0.5); //**ボールをタップしたときの動く方向??//osuzuki:そうです。
+    floatUpBeahavior.active = NO; //**タップしたからといってその他のアクションはなし？//osuzuki:activeをYESに移動してしまいます
     [animator addBehavior:floatUpBeahavior];
     self.floatUpBehavior = floatUpBeahavior;
     
     
     //**ブロック文というのは分かるのですが、なぜブロック文を利用するのかがわかりませんので教えてくださーい??
     //物理アニメーションの設定ですかね？
+    //osuzuki:actionというプロパティは、アニメーションが実行されている間呼ばれ続ける（何度も）処理を書く感じです。
+    //「処理を書く」ので、オブジェクトを渡すのではないです。そういったときは、ブロック文を渡した方が都合がいいです。
     UIDynamicBehavior *scrollBehavior = [[UIDynamicBehavior alloc] init];
     scrollBehavior.action = ^ {
         [self updateViews];
@@ -127,14 +140,17 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
     [animator addBehavior:scrollBehavior];
     
     self.animator = animator;
+    //osuzuki:UIDynamicAnimatorオブジェクトのanimatorがすべてのビヘイビアを管理します。
 }
 
 //ビューを更新
 - (void)updateViews
 {
     for(UIView *scenary in self.sceneries){ //**ビューの画面風景は自身?　背景は変わらないってこと?
+         //osuzuki:sceneriesには、障害物のimageview（たくさん）と、地面画像のimageviewがはいってます
         scenary.center = CGPointMake(scenary.center.x-SCROLL_SPEED, scenary.center.y); //**ボールはセンター!!
         //**以下の処理は何をしてるのでしょうか？
+        //osuzuki:障害物imageviewが、真ん中にきたときに、スコアをプラス1をして、スコア表示を更新してます
         if(scenary.tag == TAG_BUILDING
            && (int)(scenary.frame.origin.x+scenary.frame.size.width)==(int)([self displaySize].width/2)){
             self.score++;
@@ -143,6 +159,7 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
     }
     //**
     //** <= - これってポイントを指しているんだと思うのですが、「始まりとビューは同じ画面になる?」ってことでしょうか?
+    //osuzuki:ポインタじゃないんです（汗）　< と = があわさったもですよ。値の大小の比較です。
     if (self.groundImageView.frame.origin.x <= -[self displaySize].width) {
         self.groundImageView.center = CGPointMake([self displaySize].width, self.groundImageView.center.y);
         
@@ -158,6 +175,7 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
     
     //衝突判定
     //**ぶつかったら、アニメーションを取り除く設定?や中央にラベルを表示する
+    //osuzuki:そうです
     for (UIView *scenary  in self.sceneries) {
         if(CGRectIntersectsRect(self.ballImageView.frame, scenary.frame)){
             NSLog(@"Game Over!");
@@ -249,6 +267,7 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
 //タッチ開始時に呼ばれる
 
 //**このイベントって宣言は必要ないやつですか?
+//osuzuki:必要ないです。UIViewControllerはUIResponderを継承していて、UIResponder内で実装されているメソッドを呼んでいるので、宣言は必要ないです。
 - (void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
     NSLog(@"%@",NSStringFromSelector(_cmd)); //**タップしたらLogにだす
@@ -269,11 +288,13 @@ typedef NS_ENUM(NSInteger, NGGViewStatus) { //**整数のステータスを返�
 
 //衝突ビヘイビアのデリゲート
 //**ここはどのような処理になるんでしょうか??
+//osuzuki:衝突ビヘイビアを与えたアイテム（今回はボール）が、境界線と、衝突開始したときに呼ばれるメソッドです　- たぶん。
 - (void)collisionBehavior:(UICollisionBehavior*)behavior beganContactForItem:(id <UIDynamicItem>)item withBoundaryIdentifier:(id <NSCopying>)identifier atPoint:(CGPoint)p
 {
     NSLog(@"%@",NSStringFromSelector(_cmd));
 }
 
+//osuzuki:衝突ビヘイビアを与えたアイテム（今回はボール）が、境界線と、衝突終了したときに呼ばれるメソッドです　- たぶん。
 - (void)collisionBehavior:(UICollisionBehavior*)behavior endedContactForItem:(id <UIDynamicItem>)item withBoundaryIdentifier:(id <NSCopying>)identifier
 {
     NSLog(@"%@", NSStringFromSelector(_cmd));
